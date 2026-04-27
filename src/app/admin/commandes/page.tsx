@@ -1,21 +1,51 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import OrdersTable from '@/components/admin/OrdersTable';
-import { mockOrders } from '@/lib/mock-data';
+import { Order } from '@/lib/types';
 
 export default function CommandesPage() {
   const [statusFilter, setStatusFilter] = useState('all');
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
 
-  const filteredOrders =
-    statusFilter === 'all'
-      ? mockOrders
-      : mockOrders.filter((o) => o.status === statusFilter);
+  const filteredOrders = useMemo(
+    () =>
+      statusFilter === 'all'
+        ? orders
+        : orders.filter((o) => o.status === statusFilter),
+    [orders, statusFilter]
+  );
+
+  // Fetches orders for admin filtering and table display.
+  const fetchOrders = async () => {
+    try {
+      const response = await fetch('/api/orders', {
+        cache: 'no-store',
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = (await response.json()) as { orders: Order[] };
+      setOrders(data.orders || []);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchOrders();
+  }, []);
 
   const statusOptions = [
     { value: 'all', label: 'Toutes' },
     { value: 'pending', label: 'En attente' },
+    { value: 'pending_cod', label: 'COD à confirmer' },
+    { value: 'confirmed_cod', label: 'COD confirmées' },
     { value: 'confirmed', label: 'Confirmées' },
+    { value: 'paid', label: 'Payées' },
     { value: 'shipped', label: 'Expédiées' },
     { value: 'delivered', label: 'Livrées' },
     { value: 'cancelled', label: 'Annulées' },
@@ -51,8 +81,8 @@ export default function CommandesPage() {
         {statusOptions.map((option) => {
           const count =
             option.value === 'all'
-              ? mockOrders.length
-              : mockOrders.filter((o) => o.status === option.value).length;
+              ? orders.length
+              : orders.filter((o) => o.status === option.value).length;
           return (
             <button
               key={option.value}
@@ -70,9 +100,15 @@ export default function CommandesPage() {
       </div>
 
       {/* Orders Table */}
-      <OrdersTable orders={filteredOrders} />
+      {loadingOrders ? (
+        <div className="text-center py-12 bg-white rounded-lg">
+          <p className="text-gray-500">Chargement des commandes...</p>
+        </div>
+      ) : (
+        <OrdersTable orders={filteredOrders} />
+      )}
 
-      {filteredOrders.length === 0 && (
+      {!loadingOrders && filteredOrders.length === 0 && (
         <div className="text-center py-12 bg-white rounded-lg">
           <p className="text-gray-500">
             Aucune commande avec ce statut.

@@ -2,30 +2,81 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
+import {
+  Minus,
+  Plus,
+  Trash2,
+  ShoppingBag,
+  ArrowLeft,
+  Loader2,
+} from 'lucide-react';
+import { useState } from 'react';
 import { useCartStore } from '@/store/cart';
 import { formatPrice } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import AnimatedSection from '@/components/ui/AnimatedSection';
+import type { PaymentMethod } from '@/lib/types';
 
 export default function PanierPage() {
   const { items, removeItem, updateQuantity, totalPrice, clearCart } =
     useCartStore();
+  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+    useState<PaymentMethod>('cod');
+  const [isRedirecting, setIsRedirecting] = useState(false);
+
+  const shippingFees = totalPrice() >= 150 ? 0 : 7;
+  const totalWithShipping = totalPrice() + shippingFees;
 
   const handleCheckout = async () => {
+    if (isRedirecting) {
+      return;
+    }
+
+    setIsRedirecting(true);
+
     try {
-      const response = await fetch('/api/checkout', {
+      const endpoint =
+        selectedPaymentMethod === 'cod'
+          ? '/api/orders/cod'
+          : selectedPaymentMethod === 'konnect'
+            ? '/api/payments/konnect/initiate'
+            : '/api/payments/flouci/initiate';
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items }),
+        body: JSON.stringify({ items, totalAmount: totalWithShipping }),
       });
-      const data = await response.json();
-      if (data.url) {
-        window.location.href = data.url;
+
+      const responseType = response.headers.get('content-type') || '';
+      const isJsonResponse = responseType.includes('application/json');
+      const data = isJsonResponse ? await response.json() : null;
+
+      if (!response.ok) {
+        const fallbackErrorMessage =
+          response.status === 404
+            ? 'Le service de paiement est indisponible. Redémarrez le serveur puis réessayez.'
+            : 'Une erreur est survenue pendant l\'initialisation du paiement.';
+
+        throw new Error(
+          data?.error || fallbackErrorMessage
+        );
       }
+
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      throw new Error('URL de redirection introuvable.');
     } catch (error) {
       console.error('Erreur lors du checkout:', error);
-      alert('Une erreur est survenue. Veuillez réessayer.');
+      alert(
+        error instanceof Error
+          ? error.message
+          : 'Une erreur est survenue. Veuillez réessayer.'
+      );
+      setIsRedirecting(false);
     }
   };
 
@@ -174,7 +225,7 @@ export default function PanierPage() {
                   <div className="flex justify-between text-sm">
                     <span className="text-pierre">Livraison</span>
                     <span className="text-charbon font-medium">
-                      {totalPrice() >= 150 ? 'Gratuite' : formatPrice(7)}
+                      {shippingFees === 0 ? 'Gratuite' : formatPrice(shippingFees)}
                     </span>
                   </div>
                 </div>
@@ -184,9 +235,7 @@ export default function PanierPage() {
                     Total
                   </span>
                   <span className="text-xl font-serif font-bold text-cuir">
-                    {formatPrice(
-                      totalPrice() + (totalPrice() >= 150 ? 0 : 7)
-                    )}
+                    {formatPrice(totalWithShipping)}
                   </span>
                 </div>
 
@@ -198,18 +247,79 @@ export default function PanierPage() {
                   </p>
                 )}
 
+                <div className="mb-4">
+                  <p className="text-xs uppercase tracking-wider text-charbon font-medium mb-3">
+                    Moyen de paiement
+                  </p>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-3 border border-pierre-light/30 rounded-sm px-3 py-2 cursor-pointer hover:border-cuir transition-colors">
+                      <input
+                        type="radio"
+                        name="payment-method"
+                        value="cod"
+                        checked={selectedPaymentMethod === 'cod'}
+                        onChange={() => setSelectedPaymentMethod('cod')}
+                        className="accent-cuir"
+                      />
+                      <span className="text-sm text-charbon">
+                        🔵 Payer à la livraison
+                      </span>
+                    </label>
+
+                    <label className="flex items-center gap-3 border border-pierre-light/30 rounded-sm px-3 py-2 cursor-pointer hover:border-cuir transition-colors">
+                      <input
+                        type="radio"
+                        name="payment-method"
+                        value="konnect"
+                        checked={selectedPaymentMethod === 'konnect'}
+                        onChange={() => setSelectedPaymentMethod('konnect')}
+                        className="accent-cuir"
+                      />
+                      <span className="text-sm text-charbon">
+                        🟦 Payer par Konnect
+                      </span>
+                    </label>
+
+                    <label className="flex items-center gap-3 border border-pierre-light/30 rounded-sm px-3 py-2 cursor-pointer hover:border-cuir transition-colors">
+                      <input
+                        type="radio"
+                        name="payment-method"
+                        value="flouci"
+                        checked={selectedPaymentMethod === 'flouci'}
+                        onChange={() => setSelectedPaymentMethod('flouci')}
+                        className="accent-cuir"
+                      />
+                      <span className="text-sm text-charbon">
+                        🟣 Payer par Flouci
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
                 <Button
                   variant="primary"
                   size="lg"
                   className="w-full"
                   onClick={handleCheckout}
                   id="btn-checkout"
+                  disabled={isRedirecting}
                 >
-                  Passer commande
+                  {isRedirecting ? (
+                    <>
+                      <Loader2 size={18} className="mr-2 animate-spin" />
+                      Redirection...
+                    </>
+                  ) : (
+                    'Commander'
+                  )}
                 </Button>
 
                 <p className="text-[10px] text-pierre text-center mt-4">
-                  Paiement sécurisé par Stripe. 🔒
+                  {selectedPaymentMethod === 'cod'
+                    ? 'Paiement en espèces à la livraison.'
+                    : selectedPaymentMethod === 'konnect'
+                      ? 'Redirection sécurisée vers Konnect.'
+                      : 'Redirection sécurisée vers Flouci.'}
                 </p>
               </div>
             </AnimatedSection>

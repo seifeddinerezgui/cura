@@ -56,7 +56,7 @@ export const mockProducts: Product[] = [
     description: 'Inspirée par les ruelles colorées de la médina de Tunis, la ceinture Médina présente un design épuré avec des coutures apparentes en fil de lin. Le cuir est sélectionné avec soin pour sa souplesse et sa patine naturelle qui se bonifie avec le temps.',
     shortDescription: 'Ceinture artisanale avec coutures en fil de lin naturel.',
     images: [
-      { _key: 'img-1', url: 'https://images.unsplash.com/photo-1585856331426-2ed78cdb39e1?w=800&q=80', alt: 'Ceinture Médina' },
+      { _key: 'img-1', url: 'https://images.unsplash.com/photo-1624222247344-550fb60583dc?w=800&q=80', alt: 'Ceinture Médina' },
     ],
     category: mockCategories[0],
     inStock: true,

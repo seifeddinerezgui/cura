@@ -41,6 +41,18 @@ export interface BlogPost {
   tags: string[];
 }
 
+export type OrderStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'shipped'
+  | 'delivered'
+  | 'cancelled'
+  | 'pending_cod'
+  | 'confirmed_cod'
+  | 'paid';
+
+export type PaymentMethod = 'cod' | 'konnect' | 'flouci' | 'stripe';
+
 export interface Order {
   _id: string;
   orderNumber: string;
@@ -48,9 +60,11 @@ export interface Order {
   customerEmail: string;
   items: OrderItem[];
   totalAmount: number;
-  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
-  stripeSessionId: string;
-  shippingAddress: string;
+  status: OrderStatus;
+  stripeSessionId?: string;
+  shippingAddress?: string;
+  paymentMethod?: PaymentMethod;
+  paymentReference?: string;
   createdAt: string;
 }
 

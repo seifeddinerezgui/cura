@@ -1,6 +1,3 @@
-'use client';
-
-import { use } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
@@ -10,12 +7,12 @@ import RelatedProducts from '@/components/product/RelatedProducts';
 import AnimatedSection from '@/components/ui/AnimatedSection';
 import { mockProducts } from '@/lib/mock-data';
 
-export default function ProductPage({
+export default async function ProductPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const { slug } = use(params);
+  const { slug } = await params;
   const product = mockProducts.find((p) => p.slug === slug);
 
   if (!product) {

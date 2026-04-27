@@ -14,6 +14,9 @@ const statusLabels: Record<string, string> = {
   shipped: 'Expédiée',
   delivered: 'Livrée',
   cancelled: 'Annulée',
+  pending_cod: 'COD à confirmer',
+  confirmed_cod: 'COD confirmée',
+  paid: 'Payée',
 };
 
 const statusVariants: Record<string, 'warning' | 'info' | 'default' | 'success' | 'danger'> = {
@@ -22,6 +25,9 @@ const statusVariants: Record<string, 'warning' | 'info' | 'default' | 'success' 
   shipped: 'default',
   delivered: 'success',
   cancelled: 'danger',
+  pending_cod: 'warning',
+  confirmed_cod: 'info',
+  paid: 'success',
 };
 
 export default function OrdersTable({ orders }: OrdersTableProps) {
@@ -84,8 +90,8 @@ export default function OrdersTable({ orders }: OrdersTableProps) {
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <Badge variant={statusVariants[order.status]}>
-                    {statusLabels[order.status]}
+                  <Badge variant={statusVariants[order.status] || 'default'}>
+                    {statusLabels[order.status] || order.status}
                   </Badge>
                 </td>
               </tr>
